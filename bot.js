@@ -1,30 +1,29 @@
 require("dotenv").config();
+const express = require('express');
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require("discord.js");
 const axios = require("axios");
 
+// Minimal Express server to prevent hosting timeout
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => res.send("✅ Discord Bot is running!"));
+app.listen(PORT, () => console.log(`🌐 Express server listening on port ${PORT}`));
+
+// Discord client setup
 const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
 // Slash commands setup
 const commands = [
-  new SlashCommandBuilder()
-    .setName('nseactive')
-    .setDescription('Get the top 5 most active NSE stocks'),
-
-  new SlashCommandBuilder()
-    .setName('bseactive')
-    .setDescription('Get the top 5 most active BSE stocks'),
-
-  new SlashCommandBuilder()
-    .setName('ipoupcoming')
-    .setDescription('Get upcoming IPOs'),
-
+  new SlashCommandBuilder().setName('nseactive').setDescription('Get the top 5 most active NSE stocks'),
+  new SlashCommandBuilder().setName('bseactive').setDescription('Get the top 5 most active BSE stocks'),
+  new SlashCommandBuilder().setName('ipoupcoming').setDescription('Get upcoming IPOs'),
   new SlashCommandBuilder()
     .setName('companyinfo')
     .setDescription('Get information about a company')
     .addStringOption(option => option.setName('company').setDescription('Company name').setRequired(true)),
-
   new SlashCommandBuilder()
     .setName('trendingstocks')
     .setDescription('Show top 3 gainers and losers from the stock market'),
@@ -35,7 +34,6 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 
 client.once("ready", async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
-
   try {
     await rest.put(
       Routes.applicationCommands(process.env.CLIENT_ID),
@@ -50,7 +48,6 @@ client.once("ready", async () => {
 // Command handler
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
-
   const { commandName } = interaction;
 
   try {
@@ -67,10 +64,7 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       const topStocks = stocks.slice(0, 5).map((stock, index) => {
-        return `📌 **${index + 1}. ${stock.company} (${stock.ticker})**\n` +
-          `💰 Price: ₹${stock.price} | 📈 Change: ${stock.net_change} (${stock.percent_change}%)\n` +
-          `🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${stock.volume.toLocaleString()}\n` +
-          `📊 Rating: ${stock.overall_rating} | 📉 Trend: ${stock.short_term_trend}, ${stock.long_term_trend}`;
+        return `📌 **${index + 1}. ${stock.company} (${stock.ticker})**\n💰 Price: ₹${stock.price} | 📈 Change: ${stock.net_change} (${stock.percent_change}%)\n🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${stock.volume.toLocaleString()}\n📊 Rating: ${stock.overall_rating} | 📉 Trend: ${stock.short_term_trend}, ${stock.long_term_trend}`;
       }).join("\n\n");
 
       return interaction.editReply(`📢 **Top 5 Most Active NSE Stocks:**\n\n${topStocks}`);
@@ -89,10 +83,7 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       const topStocks = stocks.slice(0, 5).map((stock, index) => {
-        return `📌 **${index + 1}. ${stock.company} (${stock.ticker})**\n` +
-          `💰 Price: ₹${stock.price} | 📈 Change: ${stock.net_change} (${stock.percent_change}%)\n` +
-          `🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${stock.volume.toLocaleString()}\n` +
-          `📊 Rating: ${stock.overall_rating} | 📉 Trend: ${stock.short_term_trend}, ${stock.long_term_trend}`;
+        return `📌 **${index + 1}. ${stock.company} (${stock.ticker})**\n💰 Price: ₹${stock.price} | 📈 Change: ${stock.net_change} (${stock.percent_change}%)\n🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${stock.volume.toLocaleString()}\n📊 Rating: ${stock.overall_rating} | 📉 Trend: ${stock.short_term_trend}, ${stock.long_term_trend}`;
       }).join("\n\n");
 
       return interaction.editReply(`📢 **Top 5 Most Active BSE Stocks:**\n\n${topStocks}`);
@@ -101,8 +92,7 @@ client.on("interactionCreate", async (interaction) => {
     if (commandName === 'ipoupcoming') {
       await interaction.deferReply();
 
-      const apiUrl = `https://stock.indianapi.in/ipo`;
-      const response = await axios.get(apiUrl, {
+      const response = await axios.get("https://stock.indianapi.in/ipo", {
         headers: { "x-api-key": process.env.INDIAN_API_KEY },
       });
 
@@ -112,9 +102,7 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       const firstFive = ipoList.slice(0, 5).map((ipo, i) => {
-        return `📌 **${i + 1}. ${ipo.name} (${ipo.symbol})**\n` +
-          `📄 [Doc](${ipo.document_url}) | 💸 ₹${ipo.min_price || "TBA"} - ₹${ipo.max_price || "TBA"}\n` +
-          `📅 Bidding: ${ipo.bidding_start_date || "TBA"} - ${ipo.bidding_end_date || "TBA"}`;
+        return `📌 **${i + 1}. ${ipo.name} (${ipo.symbol})**\n📄 [Doc](${ipo.document_url}) | 💸 ₹${ipo.min_price || "TBA"} - ₹${ipo.max_price || "TBA"}\n📅 Bidding: ${ipo.bidding_start_date || "TBA"} - ${ipo.bidding_end_date || "TBA"}`;
       }).join("\n\n");
 
       return interaction.editReply(`📢 **Upcoming IPOs (1–5):**\n\n${firstFive}`);
@@ -132,12 +120,13 @@ client.on("interactionCreate", async (interaction) => {
       if (data && data.companyName) {
         return interaction.editReply(`
 📊 **${data.companyName}**
-**Industry:** ${data.industry || "Not Available"}
-**Description:** ${data.companyProfile?.companyDescription || "No description available."}
+*Industry:* ${data.industry || "Not Available"}
+*Description:* ${data.companyProfile?.companyDescription || "No description available."}
+
 💹 **Stock Info**
 - **Current Price NSE:** ₹${data.currentPrice?.NSE || "Not Available"}
 - **Current Price BSE:** ₹${data.currentPrice?.BSE || "Not Available"}
-- **Market Cap:** ₹${data.companyProfile?.peerCompanyList[1].marketCap || "Not Available"} Cr
+- **Market Cap:** ₹${data.companyProfile?.peerCompanyList?.[1]?.marketCap || "Not Available"} Cr
         `);
       } else {
         return interaction.editReply("❌ Company data not found.");
@@ -159,15 +148,11 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       const gainersText = gainers.slice(0, 3).map((stock, index) => {
-        return `📈 **${index + 1}. ${stock.company_name} (${stock.ticker_id})**\n` +
-          `💰 Price: ₹${stock.price} | 📊 Change: ${stock.net_change} (${stock.percent_change}%)\n` +
-          `🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${parseInt(stock.volume).toLocaleString()}`;
+        return `📈 **${index + 1}. ${stock.company_name} (${stock.ticker_id})**\n💰 Price: ₹${stock.price} | 📊 Change: ${stock.net_change} (${stock.percent_change}%)\n🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${parseInt(stock.volume).toLocaleString()}`;
       }).join("\n\n");
 
       const losersText = losers.slice(0, 3).map((stock, index) => {
-        return `📉 **${index + 1}. ${stock.company_name} (${stock.ticker_id})**\n` +
-          `💰 Price: ₹${stock.price} | 📊 Change: ${stock.net_change} (${stock.percent_change}%)\n` +
-          `🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${parseInt(stock.volume).toLocaleString()}`;
+        return `📉 **${index + 1}. ${stock.company_name} (${stock.ticker_id})**\n💰 Price: ₹${stock.price} | 📊 Change: ${stock.net_change} (${stock.percent_change}%)\n🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${parseInt(stock.volume).toLocaleString()}`;
       }).join("\n\n");
 
       return interaction.editReply(
