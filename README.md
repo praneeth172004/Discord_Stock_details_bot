@@ -1,76 +1,79 @@
-📈 Stock Market Discord Bot
-A powerful Discord bot built using Discord.js and Indian Stock Market API that provides real-time stock insights, including most active stocks, upcoming IPOs, trending stocks, and detailed company info.
+# 📈 Stock Market Discord Bot
 
-✨ Features
-📌 Most Active Stocks: Get top 5 most active stocks from NSE or BSE.
+A powerful Discord bot built using [Discord.js](https://discord.js.org/) and [Indian Stock Market API](https://indianapi.in/) that provides real-time stock insights, including most active stocks, upcoming IPOs, trending stocks, and detailed company info.
 
-🆕 Upcoming IPOs: Lists the latest IPOs with dates and price ranges.
+## ✨ Features
 
-🔍 Company Info: Fetch detailed information about a company including prices, industry, and profile.
+- 📌 **Most Active Stocks**: Get top 5 most active stocks from **NSE** or **BSE**.
+- 🆕 **Upcoming IPOs**: Lists the latest IPOs with dates and price ranges.
+- 🔍 **Company Info**: Fetch detailed information about a company including prices, industry, and profile.
+- 📊 **Trending Stocks**: View top gainers and losers in the market.
 
-📊 Trending Stocks: View top gainers and losers in the market.
+## 🛠️ Tech Stack
 
-🛠️ Tech Stack
-Node.js
+- [Node.js](https://nodejs.org/)
+- [Express.js](https://expressjs.com/)
+- [Discord.js v14](https://discord.js.org/)
+- [Axios](https://axios-http.com/)
+- [Indian Stock Market API](https://indianapi.in/)
 
-Express.js
+## 🧪 Commands
 
-Discord.js v14
+| Command            | Description                                       |
+|--------------------|---------------------------------------------------|
+| `/nseactive`       | Top 5 most active stocks in NSE                   |
+| `/bseactive`       | Top 5 most active stocks in BSE                   |
+| `/ipoupcoming`     | List of upcoming IPOs                             |
+| `/companyinfo`     | Get info about a company (requires name input)    |
+| `/trendingstocks`  | Shows top 3 gainers and top 3 losers              |
 
-Axios
+## 📦 Setup Instructions
 
-Indian Stock Market API
+### 1. Clone the repository
 
-🧪 Commands
-Command	Description
-/nseactive	Top 5 most active stocks in NSE
-/bseactive	Top 5 most active stocks in BSE
-/ipoupcoming	List of upcoming IPOs
-/companyinfo	Get info about a company (requires name input)
-/trendingstocks	Shows top 3 gainers and top 3 losers
-📦 Setup Instructions
-1. Clone the repository
-bash
-Copy
-Edit
+```bash
 git clone https://github.com/<your-username>/stock-market-discord-bot.git
 cd stock-market-discord-bot
-2. Install dependencies
-bash
-Copy
-Edit
-npm install
-3. Create .env file
-Create a .env file in the root directory with the following:
+```
 
-env
-Copy
-Edit
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Create `.env` file
+
+Create a `.env` file in the root directory with the following:
+
+```env
 DISCORD_BOT_TOKEN=your_discord_bot_token
 CLIENT_ID=your_discord_application_client_id
 INDIAN_API_KEY=your_indian_stock_api_key
 PORT=3000
-🔐 Make sure to keep your tokens and keys secret and never commit .env to GitHub.
+```
 
-4. Run the bot
-bash
-Copy
-Edit
+> 🔐 Make sure to keep your tokens and keys **secret** and **never commit `.env`** to GitHub.
+
+### 4. Run the bot
+
+```bash
 node index.js
-Your bot should now be live on Discord and the Express server should keep it awake on platforms like Replit, Railway, or Render.
+```
 
-🧠 Future Improvements
-Add support for buttons and pagination
+Your bot should now be live on Discord and the Express server should keep it awake on platforms like **Replit**, **Railway**, or **Render**.
 
-Save company search history
+## 🧠 Future Improvements
 
-Alerting system for stock price targets
+- Add support for buttons and pagination
+- Save company search history
+- Alerting system for stock price targets
+- Web dashboard for bot statistics
 
-Web dashboard for bot statistics
+## 🤝 Contributions
 
-🤝 Contributions
-Contributions, suggestions, and feedback are welcome! Feel free to open an issue or submit a PR.
+Contributions, suggestions, and feedback are welcome! Feel free to [open an issue](https://github.com/<your-username>/stock-market-discord-bot/issues) or submit a PR.
 
-📄 License
-This project is open-sourced under the MIT License.
+## 📄 License
 
+This project is open-sourced under the [MIT License](LICENSE).
