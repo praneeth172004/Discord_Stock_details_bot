@@ -11,11 +11,9 @@ app.get("/", (req, res) => res.send("✅ Discord Bot is running!"));
 app.listen(PORT, () => console.log(`🌐 Express server listening on port ${PORT}`));
 
 // Discord client setup
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
-});
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-// Slash commands setup
+// Slash commands
 const commands = [
   new SlashCommandBuilder().setName('nseactive').setDescription('Get the top 5 most active NSE stocks'),
   new SlashCommandBuilder().setName('bseactive').setDescription('Get the top 5 most active BSE stocks'),
@@ -23,13 +21,13 @@ const commands = [
   new SlashCommandBuilder()
     .setName('companyinfo')
     .setDescription('Get information about a company')
-    .addStringOption(option => option.setName('company').setDescription('Company name').setRequired(true)),
-  new SlashCommandBuilder()
-    .setName('trendingstocks')
-    .setDescription('Show top 3 gainers and losers from the stock market'),
+    .addStringOption(option =>
+      option.setName('company').setDescription('Company name').setRequired(true)
+    ),
+  new SlashCommandBuilder().setName('trendingstocks').setDescription('Show top 3 gainers and losers'),
 ];
 
-// Register the commands with Discord
+// Register commands
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN);
 
 client.once("ready", async () => {
@@ -41,132 +39,112 @@ client.once("ready", async () => {
     );
     console.log("🚀 Slash commands registered.");
   } catch (err) {
-    console.error("Error registering commands: ", err);
+    console.error("❌ Failed to register commands:", err.message);
   }
 });
 
-// Command handler
+// Command Handler
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
+
   const { commandName } = interaction;
+  await interaction.deferReply();
 
   try {
-    if (commandName === 'nseactive') {
-      await interaction.deferReply();
+    switch (commandName) {
+      case 'nseactive':
+      case 'bseactive': {
+        const exchange = commandName === 'nseactive' ? 'NSE' : 'BSE';
+        const url = `https://stock.indianapi.in/${exchange}_most_active`;
 
-      const response = await axios.get("https://stock.indianapi.in/NSE_most_active", {
-        headers: { "x-api-key": process.env.INDIAN_API_KEY }
-      });
+        const { data } = await axios.get(url, {
+          headers: { "x-api-key": process.env.INDIAN_API_KEY }
+        });
 
-      const stocks = response.data;
-      if (!stocks || stocks.length === 0) {
-        return interaction.editReply("❌ No data found for most active NSE stocks.");
+        if (!data?.length) return interaction.editReply(`❌ No active stocks found for ${exchange}.`);
+
+        const top5 = data.slice(0, 5).map((stock, i) => {
+          return `📌 **${i + 1}. ${stock.company} (${stock.ticker})**
+💰 Price: ₹${stock.price} | 📈 Change: ${stock.net_change} (${stock.percent_change}%)
+🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${stock.volume.toLocaleString()}
+📊 Rating: ${stock.overall_rating} | 📉 Trend: ${stock.short_term_trend}, ${stock.long_term_trend}`;
+        }).join("\n\n");
+
+        return interaction.editReply(`📢 **Top 5 Most Active ${exchange} Stocks:**\n\n${top5}`);
       }
 
-      const topStocks = stocks.slice(0, 5).map((stock, index) => {
-        return `📌 **${index + 1}. ${stock.company} (${stock.ticker})**\n💰 Price: ₹${stock.price} | 📈 Change: ${stock.net_change} (${stock.percent_change}%)\n🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${stock.volume.toLocaleString()}\n📊 Rating: ${stock.overall_rating} | 📉 Trend: ${stock.short_term_trend}, ${stock.long_term_trend}`;
-      }).join("\n\n");
+      case 'ipoupcoming': {
+        const { data } = await axios.get("https://stock.indianapi.in/ipo", {
+          headers: { "x-api-key": process.env.INDIAN_API_KEY }
+        });
 
-      return interaction.editReply(`📢 **Top 5 Most Active NSE Stocks:**\n\n${topStocks}`);
-    }
+        const upcoming = data?.upcoming || [];
+        if (!upcoming.length) return interaction.editReply("❌ No upcoming IPOs found.");
 
-    if (commandName === 'bseactive') {
-      await interaction.deferReply();
+        const list = upcoming.slice(0, 5).map((ipo, i) => {
+          return `📌 **${i + 1}. ${ipo.name} (${ipo.symbol})**
+📄 [Doc](${ipo.document_url || "#"}) | 💸 ₹${ipo.min_price || "TBA"} - ₹${ipo.max_price || "TBA"}
+📅 Bidding: ${ipo.bidding_start_date || "TBA"} - ${ipo.bidding_end_date || "TBA"}`;
+        }).join("\n\n");
 
-      const response = await axios.get("https://stock.indianapi.in/BSE_most_active", {
-        headers: { "x-api-key": process.env.INDIAN_API_KEY }
-      });
-
-      const stocks = response.data;
-      if (!stocks || stocks.length === 0) {
-        return interaction.editReply("❌ No data found for most active BSE stocks.");
+        return interaction.editReply(`📢 **Upcoming IPOs:**\n\n${list}`);
       }
 
-      const topStocks = stocks.slice(0, 5).map((stock, index) => {
-        return `📌 **${index + 1}. ${stock.company} (${stock.ticker})**\n💰 Price: ₹${stock.price} | 📈 Change: ${stock.net_change} (${stock.percent_change}%)\n🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${stock.volume.toLocaleString()}\n📊 Rating: ${stock.overall_rating} | 📉 Trend: ${stock.short_term_trend}, ${stock.long_term_trend}`;
-      }).join("\n\n");
+      case 'companyinfo': {
+        const companyName = interaction.options.getString("company");
+        const { data } = await axios.get(`https://stock.indianapi.in/stock?name=${encodeURIComponent(companyName)}`, {
+          headers: { "x-api-key": process.env.INDIAN_API_KEY }
+        });
 
-      return interaction.editReply(`📢 **Top 5 Most Active BSE Stocks:**\n\n${topStocks}`);
-    }
+        if (!data || !data.companyName) return interaction.editReply("❌ Company not found.");
 
-    if (commandName === 'ipoupcoming') {
-      await interaction.deferReply();
-
-      const response = await axios.get("https://stock.indianapi.in/ipo", {
-        headers: { "x-api-key": process.env.INDIAN_API_KEY },
-      });
-
-      const ipoList = response.data.upcoming;
-      if (!ipoList || ipoList.length === 0) {
-        return interaction.editReply("❌ No upcoming IPOs available.");
-      }
-
-      const firstFive = ipoList.slice(0, 5).map((ipo, i) => {
-        return `📌 **${i + 1}. ${ipo.name} (${ipo.symbol})**\n📄 [Doc](${ipo.document_url}) | 💸 ₹${ipo.min_price || "TBA"} - ₹${ipo.max_price || "TBA"}\n📅 Bidding: ${ipo.bidding_start_date || "TBA"} - ${ipo.bidding_end_date || "TBA"}`;
-      }).join("\n\n");
-
-      return interaction.editReply(`📢 **Upcoming IPOs (1–5):**\n\n${firstFive}`);
-    }
-
-    if (commandName === 'companyinfo') {
-      await interaction.deferReply();
-
-      const companyName = interaction.options.getString("company");
-      const response = await axios.get(`https://stock.indianapi.in/stock?name=${encodeURIComponent(companyName)}`, {
-        headers: { "x-api-key": process.env.INDIAN_API_KEY },
-      });
-
-      const data = response.data;
-      if (data && data.companyName) {
-        return interaction.editReply(`
+        const companyDetails = `
 📊 **${data.companyName}**
 *Industry:* ${data.industry || "Not Available"}
 *Description:* ${data.companyProfile?.companyDescription || "No description available."}
 
 💹 **Stock Info**
-- **Current Price NSE:** ₹${data.currentPrice?.NSE || "Not Available"}
-- **Current Price BSE:** ₹${data.currentPrice?.BSE || "Not Available"}
-- **Market Cap:** ₹${data.companyProfile?.peerCompanyList?.[1]?.marketCap || "Not Available"} Cr
-        `);
-      } else {
-        return interaction.editReply("❌ Company data not found.");
-      }
-    }
+- **NSE Price:** ₹${data.currentPrice?.NSE || "Not Available"}
+- **BSE Price:** ₹${data.currentPrice?.BSE || "Not Available"}
+- **Market Cap:** ₹${data.companyProfile?.peerCompanyList?.[1]?.marketCap || "N/A"} Cr`;
 
-    if (commandName === 'trendingstocks') {
-      await interaction.deferReply();
-
-      const response = await axios.get("https://stock.indianapi.in/trending", {
-        headers: { "x-api-key": process.env.INDIAN_API_KEY }
-      });
-
-      const gainers = response.data?.trending_stocks?.top_gainers || [];
-      const losers = response.data?.trending_stocks?.top_losers || [];
-
-      if (gainers.length === 0 && losers.length === 0) {
-        return interaction.editReply("❌ No trending data available at the moment.");
+        return interaction.editReply(companyDetails);
       }
 
-      const gainersText = gainers.slice(0, 3).map((stock, index) => {
-        return `📈 **${index + 1}. ${stock.company_name} (${stock.ticker_id})**\n💰 Price: ₹${stock.price} | 📊 Change: ${stock.net_change} (${stock.percent_change}%)\n🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${parseInt(stock.volume).toLocaleString()}`;
-      }).join("\n\n");
+      case 'trendingstocks': {
+        const { data } = await axios.get("https://stock.indianapi.in/trending", {
+          headers: { "x-api-key": process.env.INDIAN_API_KEY }
+        });
 
-      const losersText = losers.slice(0, 3).map((stock, index) => {
-        return `📉 **${index + 1}. ${stock.company_name} (${stock.ticker_id})**\n💰 Price: ₹${stock.price} | 📊 Change: ${stock.net_change} (${stock.percent_change}%)\n🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${parseInt(stock.volume).toLocaleString()}`;
-      }).join("\n\n");
+        const gainers = data?.trending_stocks?.top_gainers || [];
+        const losers = data?.trending_stocks?.top_losers || [];
 
-      return interaction.editReply(
-        `📢 **Top 3 Gainers**:\n\n${gainersText}\n\n🟥 **Top 3 Losers**:\n\n${losersText}`
-      );
+        if (!gainers.length && !losers.length)
+          return interaction.editReply("❌ No trending data available at the moment.");
+
+        const gainersText = gainers.slice(0, 3).map((stock, i) => {
+          return `📈 **${i + 1}. ${stock.company_name} (${stock.ticker_id})**
+💰 Price: ₹${stock.price} | 📊 Change: ${stock.net_change} (${stock.percent_change}%)
+🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${parseInt(stock.volume).toLocaleString()}`;
+        }).join("\n\n");
+
+        const losersText = losers.slice(0, 3).map((stock, i) => {
+          return `📉 **${i + 1}. ${stock.company_name} (${stock.ticker_id})**
+💰 Price: ₹${stock.price} | 📊 Change: ${stock.net_change} (${stock.percent_change}%)
+🔺 High: ₹${stock.high} | 🔻 Low: ₹${stock.low} | 🕒 Volume: ${parseInt(stock.volume).toLocaleString()}`;
+        }).join("\n\n");
+
+        return interaction.editReply(`📢 **Top 3 Gainers:**\n\n${gainersText}\n\n🟥 **Top 3 Losers:**\n\n${losersText}`);
+      }
+
+      default:
+        return interaction.editReply("⚠️ Unknown command.");
     }
 
   } catch (error) {
-    console.error(error);
-    if (interaction.deferred || interaction.replied) {
-      return interaction.editReply("🚨 Error occurred. Please try again later.");
-    } else {
-      return interaction.reply("🚨 Error occurred. Please try again later.");
-    }
+    console.error("Command Error:", error.message);
+    const message = error?.response?.data?.message || error.message || "Unknown error.";
+    return interaction.editReply(`🚨 Something went wrong: ${message}`);
   }
 });
 
